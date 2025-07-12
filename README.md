@@ -56,8 +56,8 @@ curl -X POST http://localhost:8080/mcp \
 ### Test Persistent Shell
 ```bash
 # Test persistent shell functionality
-chmod +x persistent_shell_examples.sh
-./persistent_shell_examples.sh
+chmod +x examples/persistent_shell_examples.sh
+./examples/persistent_shell_examples.sh
 ```
 
 ## Documentation
@@ -94,8 +94,9 @@ The server implements the [Model Context Protocol](https://modelcontextprotocol.
 
 ## Platform Support
 
-- **macOS (darwin)**: Full support
-- **Linux**: Full support
+- **macOS (darwin)**: Full support - AMD64 & ARM64
+- **Linux**: Full support - AMD64 & ARM64
+- **Docker**: Multi-architecture support via buildx
 
 ## Integration
 
@@ -116,6 +117,19 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
+### Docker
+
+```bash
+# Run AMD64 image
+docker run --rm -p 8080:8080 terminal-mcp:latest-linux-amd64 --http --port 8080
+
+# Run ARM64 image  
+docker run --rm -p 8080:8080 terminal-mcp:latest-linux-arm64 --http --port 8080
+
+# Run with persistent shell session
+docker run --rm -p 8080:8080 -v /tmp:/tmp terminal-mcp:latest-linux-amd64 --http --port 8080
+```
+
 ### Other MCP Clients
 
 The server follows the standard MCP protocol and should work with any compliant MCP client.
@@ -124,9 +138,49 @@ The server follows the standard MCP protocol and should work with any compliant 
 
 ### Building
 
+#### Native Go Build
 ```bash
 go build -o mcp-terminal-server
 ```
+
+#### Multi-Platform Native Build
+```bash
+make build-all
+```
+
+#### Docker Multi-Architecture Build
+```bash
+# Build for local use (AMD64 and ARM64)
+make docker-build
+
+# Build and push to registry
+REGISTRY=your-registry.com make docker-push
+
+# Build with custom tag
+TAG=v1.0.0 make docker-build
+```
+
+### Building DXT Package
+
+To build a DXT package for distribution:
+
+```bash
+# Make the build script executable
+chmod +x build-dxt.sh
+
+# Build the DXT package
+./build-dxt.sh
+```
+
+This will:
+1. Build cross-platform binaries (macOS AMD64/ARM64, Linux AMD64/ARM64)
+2. Create a DXT package with the manifest and binaries
+3. Generate `dist/terminal-mcp.dxt` for installation in Claude Desktop
+
+**Requirements for DXT build:**
+- Go 1.23+
+- `dxt` CLI tool installed
+- Unix-like environment (macOS/Linux)
 
 ### Dependencies
 

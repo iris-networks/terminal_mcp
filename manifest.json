@@ -1,0 +1,47 @@
+{
+  "dxt_version": "1.0.0",
+  "name": "terminal-mcp",
+  "display_name": "Terminal MCP Server",
+  "description": "A Model Context Protocol server that provides secure terminal command execution with persistent sessions and cross-platform support",
+  "version": "1.0.0",
+  "author": {
+    "name": "shanurrahman"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/shanurrahman/terminal-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shanurrahman/terminal-mcp"
+  },
+  "keywords": ["mcp", "terminal", "shell", "commands", "execution"],
+  "categories": ["development", "utilities"],
+  "icon": "icon.png",
+  "tools": [
+    {
+      "name": "execute_command",
+      "description": "Execute single commands with configurable timeout"
+    },
+    {
+      "name": "persistent_shell", 
+      "description": "Execute commands in persistent shell sessions"
+    },
+    {
+      "name": "session_manager",
+      "description": "Manage shell sessions (list, close)"
+    }
+  ],
+  "server": {
+    "type": "binary",
+    "entry_point": "mcp-terminal-server",
+    "mcp_config": {
+      "command": "./mcp-terminal-server",
+      "args": [],
+      "env": {
+        "MCP_COMMAND_TIMEOUT": "30"
+      }
+    }
+  },
+  "compatibility": {
+    "os": ["darwin", "linux"]
+  }
+}

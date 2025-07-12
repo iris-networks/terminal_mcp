@@ -1,6 +1,6 @@
 # Makefile for MCP Terminal Server
 
-.PHONY: build clean test run run-http test-http test-mcp install deps fmt vet lint help dev-setup build-all demo
+.PHONY: build clean test run run-http test-http test-mcp install deps fmt vet lint help dev-setup build-all demo docker-build docker-push docker-multiarch
 
 # Default target
 .DEFAULT_GOAL := help
@@ -75,8 +75,24 @@ install:
 # Build for multiple platforms
 build-all:
 	GOOS=linux GOARCH=amd64 go build -o mcp-terminal-server-linux-amd64
+	GOOS=linux GOARCH=arm64 go build -o mcp-terminal-server-linux-arm64
 	GOOS=darwin GOARCH=amd64 go build -o mcp-terminal-server-darwin-amd64
 	GOOS=darwin GOARCH=arm64 go build -o mcp-terminal-server-darwin-arm64
+
+# Docker multi-architecture build (local)
+docker-build:
+	./build-docker.sh
+
+# Docker multi-architecture build and push to registry
+docker-push:
+	PUSH=true ./build-docker.sh
+
+# Docker multi-architecture build with custom registry
+docker-multiarch:
+	@echo "Building multi-architecture Docker images..."
+	@echo "Usage: make docker-multiarch REGISTRY=your-registry.com TAG=v1.0.0"
+	@echo "Default: REGISTRY=${REGISTRY} TAG=${TAG}"
+	REGISTRY=${REGISTRY} TAG=${TAG} ./build-docker.sh
 
 # Development setup
 dev-setup: deps
@@ -125,10 +141,12 @@ help:
 	@echo "MCP Terminal Server - Makefile Commands"
 	@echo ""
 	@echo "Building:"
-	@echo "  build      Build the server binary"
-	@echo "  build-all  Build for multiple platforms (Linux, macOS)"
-	@echo "  clean      Remove build artifacts"
-	@echo "  install    Install to GOPATH/bin"
+	@echo "  build         Build the server binary"
+	@echo "  build-all     Build for multiple platforms (Linux, macOS)"
+	@echo "  docker-build  Build multi-arch Docker images (local)"
+	@echo "  docker-push   Build and push multi-arch Docker images"
+	@echo "  clean         Remove build artifacts"
+	@echo "  install       Install to GOPATH/bin"
 	@echo ""
 	@echo "Running:"
 	@echo "  run        Run in STDIO mode (default MCP transport)"
