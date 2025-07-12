@@ -56,8 +56,8 @@ curl -X POST http://localhost:8080/mcp \
 ### Test Persistent Shell
 ```bash
 # Test persistent shell functionality
-chmod +x persistent_shell_examples.sh
-./persistent_shell_examples.sh
+chmod +x examples/persistent_shell_examples.sh
+./examples/persistent_shell_examples.sh
 ```
 
 ## Documentation
