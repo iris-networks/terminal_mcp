@@ -55,6 +55,7 @@ func main() {
 		log.Printf("  Info: http://%s/", addr)
 		log.Printf("  Execute: http://%s/execute (direct command execution)", addr)
 		log.Printf("  Message: http://%s/message?sessionId=<any-id> (MCP protocol)", addr)
+		log.Printf("  SSE: http://%s/sse?sessionId=<any-id> (Server-Sent Events)", addr)
 
 		if err := http.ListenAndServe(addr, mux); err != nil {
 			log.Fatalf("HTTP server error: %v", err)

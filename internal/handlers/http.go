@@ -6,12 +6,15 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"crypto/rand"
+	"encoding/hex"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"mcp-terminal-server/internal/config"
 	"mcp-terminal-server/internal/executor"
 	"mcp-terminal-server/internal/session"
 	"mcp-terminal-server/internal/tools"
+	"mcp-terminal-server/internal/sse"
 )
 
 // HTTPServer handles HTTP requests for the MCP server
@@ -20,6 +23,7 @@ type HTTPServer struct {
 	toolsRegistry *tools.Registry
 	sessionManager *session.Manager
 	executor    *executor.Executor
+	broadcaster *sse.Broadcaster
 }
 
 // NewHTTPServer creates a new HTTP server
@@ -29,6 +33,7 @@ func NewHTTPServer(cfg *config.Config, toolsReg *tools.Registry, sm *session.Man
 		toolsRegistry:  toolsReg,
 		sessionManager: sm,
 		executor:       exec,
+		broadcaster:    sse.NewBroadcaster(),
 	}
 }
 
@@ -42,6 +47,9 @@ func (h *HTTPServer) SetupRoutes(mux *http.ServeMux) {
 
 	// Message endpoint - accepts any session ID
 	mux.HandleFunc("/message", h.handleMessage)
+
+	// SSE endpoint - Server-Sent Events
+	mux.HandleFunc("/sse", h.handleSSE)
 }
 
 // handleInfo returns server information
@@ -53,7 +61,8 @@ func (h *HTTPServer) handleInfo(w http.ResponseWriter, r *http.Request) {
 		"description": "MCP server for executing terminal commands",
 		"endpoints": {
 			"execute": "/execute",
-			"message": "/message"
+			"message": "/message",
+			"sse": "/sse"
 		},
 		"platform": "%s",
 		"shell": "%s",
@@ -288,5 +297,98 @@ func (h *HTTPServer) createErrorResponse(id interface{}, code int, message strin
 			"code":    code,
 			"message": message,
 		},
+	}
+}
+
+// generateClientID generates a random client ID
+func generateClientID() string {
+	bytes := make([]byte, 8)
+	rand.Read(bytes)
+	return hex.EncodeToString(bytes)
+}
+
+// handleSSE handles Server-Sent Events connections
+func (h *HTTPServer) handleSSE(w http.ResponseWriter, r *http.Request) {
+	// Only allow GET requests for SSE
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get session ID from query parameter
+	sessionID := r.URL.Query().Get("sessionId")
+	if sessionID == "" {
+		http.Error(w, "Missing sessionId parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Set SSE headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Cache-Control, Accept")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+
+	// Ensure we can flush responses
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate unique client ID and add to broadcaster
+	clientID := generateClientID()
+	client := h.broadcaster.AddClient(clientID, sessionID)
+	defer h.broadcaster.RemoveClient(clientID)
+
+	// Send initial connection event
+	initialEvent := sse.Event{
+		Type:      "connected",
+		SessionID: sessionID,
+		Data: map[string]interface{}{
+			"message":   "SSE connection established",
+			"clientId":  clientID,
+			"sessionId": sessionID,
+		},
+		Timestamp: time.Now().Format(time.RFC3339),
+	}
+	fmt.Fprint(w, sse.FormatSSEMessage(initialEvent))
+	flusher.Flush()
+
+	// Create context and heartbeat ticker
+	ctx := r.Context()
+	heartbeatTicker := time.NewTicker(30 * time.Second)
+	defer heartbeatTicker.Stop()
+
+	log.Printf("SSE client %s connected for session: %s", clientID, sessionID)
+
+	// Event loop
+	for {
+		select {
+		case <-ctx.Done():
+			// Client disconnected
+			log.Printf("SSE client %s disconnected for session: %s", clientID, sessionID)
+			return
+
+		case event := <-client.Channel:
+			// Received event from broadcaster
+			fmt.Fprint(w, sse.FormatSSEMessage(event))
+			flusher.Flush()
+
+		case <-heartbeatTicker.C:
+			// Send heartbeat
+			heartbeatEvent := sse.Event{
+				Type:      "heartbeat",
+				SessionID: sessionID,
+				Data: map[string]interface{}{
+					"message": "heartbeat",
+					"clients": h.broadcaster.GetSessionClients(sessionID),
+				},
+				Timestamp: time.Now().Format(time.RFC3339),
+			}
+			fmt.Fprint(w, sse.FormatSSEMessage(heartbeatEvent))
+			flusher.Flush()
+		}
 	}
 }
