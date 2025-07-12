@@ -1,0 +1,27 @@
+# Build artifacts
+dist/
+*.dxt
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+*.md
+docs/
+
+# Development files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
