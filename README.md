@@ -133,6 +133,25 @@ go build -o mcp-terminal-server
 - `github.com/mark3labs/mcp-go` - MCP Go library
 - Go 1.23+ (automatically managed)
 
+## Production Deployment
+
+For production environments, it's recommended to run the server with proper process management and security measures:
+
+### Process Management
+- **s6**: Lightweight process supervision with automatic restart
+- **systemd**: Full-featured service management with resource limits
+- **Docker**: Containerized deployment with security isolation
+- **Supervisor**: Python-based process management
+
+### Security Features
+- **Non-root execution**: Run with dedicated user account for limited privileges
+- **Resource limits**: CPU, memory, and file access restrictions
+- **Network isolation**: Bind to localhost only for enhanced security
+- **AppArmor/SELinux**: Additional mandatory access controls
+- **File permissions**: Restricted access to necessary directories only
+
+📋 **See [Process Management Guide](docs/user-guides/PROCESS_MANAGEMENT.md) for detailed setup instructions**
+
 ## Integration with Iris Agent
 
 This MCP server is used by the [Iris Computer Use Agent](https://agent.tryiris.dev), our advanced computer use agent for automated terminal interactions.

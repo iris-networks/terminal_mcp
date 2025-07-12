@@ -8,6 +8,7 @@ Welcome to the MCP Terminal Server documentation. This server provides a Model C
 - [**Quick Start Guide**](user-guides/QUICK_START.md) - Get up and running in minutes
 - [**Getting Started**](user-guides/GETTING_STARTED.md) - Comprehensive setup and configuration
 - [**Vercel AI SDK Integration**](user-guides/VERCEL_AI_SDK.md) - Connect to Vercel AI SDK
+- [**Process Management**](user-guides/PROCESS_MANAGEMENT.md) - Production deployment with s6, systemd, and security
 
 ### Architecture
 - [**Architecture Overview**](architecture/ARCHITECTURE.md) - System design and modular structure
@@ -35,7 +36,7 @@ Welcome to the MCP Terminal Server documentation. This server provides a Model C
 go build -o mcp-terminal-server
 
 # Run in HTTP mode
-./mcp-terminal-server -sse -port 8080
+./mcp-terminal-server --http --port 8080
 
 # Run in STDIO mode (default)
 ./mcp-terminal-server
