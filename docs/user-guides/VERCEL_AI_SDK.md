@@ -14,9 +14,9 @@ This guide shows how to integrate the MCP Terminal Server with Vercel AI SDK for
 First, install the required dependencies:
 
 ```bash
-npm install ai @ai-sdk/openai @modelcontextprotocol/sdk-client
+npm install ai @ai-sdk/openai
 # or
-yarn add ai @ai-sdk/openai @modelcontextprotocol/sdk-client
+yarn add ai @ai-sdk/openai
 ```
 
 ## Setup
@@ -32,60 +32,17 @@ yarn add ai @ai-sdk/openai @modelcontextprotocol/sdk-client
 Create a file `mcp-client.ts`:
 
 ```typescript
-import { Client } from '@modelcontextprotocol/sdk-client';
-import { SSEClientTransport } from '@modelcontextprotocol/sdk-client/sse';
+import { experimental_createMCPClient as createMCPClient } from 'ai';
 
-export class MCPTerminalClient {
-  private client: Client;
-  private transport: SSEClientTransport;
+export async function createTerminalMCPClient(serverUrl: string = 'http://localhost:3001') {
+  const mcpClient = await createMCPClient({
+    transport: {
+      type: 'sse',
+      url: `${serverUrl}/sse`,
+    },
+  });
 
-  constructor(private serverUrl: string = 'http://localhost:3001') {
-    this.transport = new SSEClientTransport(
-      new URL('/sse', serverUrl),
-      new URL('/message', serverUrl)
-    );
-    this.client = new Client({
-      name: 'vercel-ai-mcp-client',
-      version: '1.0.0',
-    }, {
-      capabilities: {
-        tools: {}
-      }
-    });
-  }
-
-  async connect(): Promise<void> {
-    await this.client.connect(this.transport);
-  }
-
-  async disconnect(): Promise<void> {
-    await this.client.close();
-  }
-
-  async executeCommand(command: string, options?: {
-    timeout?: number;
-    shell?: string;
-    captureStderr?: boolean;
-  }): Promise<string> {
-    const result = await this.client.callTool({
-      name: 'execute_command',
-      arguments: {
-        command,
-        ...options
-      }
-    });
-
-    if (result.isError) {
-      throw new Error(`Command execution failed: ${result.content[0]?.text || 'Unknown error'}`);
-    }
-
-    return result.content[0]?.text || '';
-  }
-
-  async listTools(): Promise<any[]> {
-    const result = await this.client.listTools();
-    return result.tools || [];
-  }
+  return mcpClient;
 }
 ```
 
@@ -95,48 +52,17 @@ Create `ai-terminal-integration.ts`:
 
 ```typescript
 import { openai } from '@ai-sdk/openai';
-import { generateText, tool } from 'ai';
-import { z } from 'zod';
-import { MCPTerminalClient } from './mcp-client';
+import { generateText } from 'ai';
+import { createTerminalMCPClient } from './mcp-client';
 
-const mcpClient = new MCPTerminalClient();
-
-// Define the terminal execution tool for AI
-const executeTerminalCommand = tool({
-  description: 'Execute terminal commands on the system',
-  parameters: z.object({
-    command: z.string().describe('The terminal command to execute'),
-    timeout: z.number().optional().describe('Timeout in seconds (default: 30)'),
-    shell: z.string().optional().describe('Shell to use (default: system shell)'),
-    captureStderr: z.boolean().optional().describe('Capture stderr separately'),
-  }),
-  execute: async ({ command, timeout, shell, captureStderr }) => {
-    try {
-      const result = await mcpClient.executeCommand(command, {
-        timeout,
-        shell,
-        captureStderr,
-      });
-      return {
-        success: true,
-        output: result,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  },
-});
-
-export async function runAITerminalSession(userPrompt: string): Promise<string> {
-  // Connect to MCP server
-  await mcpClient.connect();
+export async function runAITerminalSession(userPrompt: string, serverUrl?: string): Promise<string> {
+  // Create MCP client
+  const mcpClient = await createTerminalMCPClient(serverUrl);
 
   try {
     const result = await generateText({
-      model: openai('gpt-4'),
+      model: openai('gpt-4o'),
+      tools: await mcpClient.tools(), // Use MCP tools directly
       messages: [
         {
           role: 'system',
@@ -149,23 +75,19 @@ export async function runAITerminalSession(userPrompt: string): Promise<string> 
           - Capture stderr when debugging issues
           - Provide clear explanations of command outputs
           
-          Available tools:
-          - execute_command: Execute terminal commands with configurable options`
+          You have access to terminal execution tools through the MCP protocol.`
         },
         {
           role: 'user',
           content: userPrompt,
         },
       ],
-      tools: {
-        execute_command: executeTerminalCommand,
-      },
       maxToolRoundtrips: 5,
     });
 
     return result.text;
-  } finally {
-    await mcpClient.disconnect();
+  } catch (error) {
+    throw new Error(`AI Terminal Session failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 ```
@@ -331,10 +253,29 @@ export OPENAI_API_KEY=your-api-key-here
 ### Custom MCP Client Configuration
 
 ```typescript
-const mcpClient = new MCPTerminalClient('http://localhost:3001');
+// Local MCP server
+const mcpClient = await createMCPClient({
+  transport: {
+    type: 'sse',
+    url: 'http://localhost:3001/sse',
+  },
+});
 
-// With custom configuration
-const mcpClient = new MCPTerminalClient('http://your-server:3001');
+// Remote MCP server
+const mcpClient = await createMCPClient({
+  transport: {
+    type: 'sse',
+    url: 'https://your-server.com/sse',
+  },
+});
+
+// For local stdio transport (if running locally)
+const mcpClient = await createMCPClient({
+  transport: {
+    type: 'stdio',
+    command: './mcp-terminal-server',
+  },
+});
 ```
 
 ## Error Handling
@@ -342,33 +283,43 @@ const mcpClient = new MCPTerminalClient('http://your-server:3001');
 ### Robust Error Handling Example
 
 ```typescript
-import { MCPTerminalClient } from './mcp-client';
+import { createTerminalMCPClient } from './mcp-client';
+import { generateText } from 'ai';
+import { openai } from '@ai-sdk/openai';
 
-async function safeExecuteCommand(command: string): Promise<{
+async function safeExecuteCommand(command: string, serverUrl?: string): Promise<{
   success: boolean;
   output?: string;
   error?: string;
 }> {
-  const client = new MCPTerminalClient();
-  
   try {
-    await client.connect();
-    const output = await client.executeCommand(command, {
-      timeout: 30, // 30 second timeout
-      captureStderr: true,
+    const mcpClient = await createTerminalMCPClient(serverUrl);
+    
+    const result = await generateText({
+      model: openai('gpt-4o'),
+      tools: await mcpClient.tools(),
+      messages: [
+        {
+          role: 'system',
+          content: 'Execute the requested command and return the output. Handle errors gracefully.'
+        },
+        {
+          role: 'user',
+          content: `Execute this command: ${command}`,
+        },
+      ],
+      maxToolRoundtrips: 1,
     });
     
     return {
       success: true,
-      output,
+      output: result.text,
     };
   } catch (error) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
-  } finally {
-    await client.disconnect();
   }
 }
 ```
@@ -403,28 +354,32 @@ if (!validateCommand(prompt)) {
 ### Unit Tests
 
 ```typescript
-import { MCPTerminalClient } from '../mcp-client';
+import { createTerminalMCPClient } from '../mcp-client';
+import { runAITerminalSession } from '../ai-terminal-integration';
 
-describe('MCPTerminalClient', () => {
-  let client: MCPTerminalClient;
+describe('Terminal MCP Integration', () => {
+  const testServerUrl = 'http://localhost:3001';
 
-  beforeEach(() => {
-    client = new MCPTerminalClient('http://localhost:3001');
+  test('should create MCP client successfully', async () => {
+    const client = await createTerminalMCPClient(testServerUrl);
+    expect(client).toBeDefined();
+    expect(client.tools).toBeDefined();
   });
 
-  test('should execute simple command', async () => {
-    await client.connect();
-    const result = await client.executeCommand('echo "Hello World"');
+  test('should execute simple command through AI', async () => {
+    const result = await runAITerminalSession(
+      'Execute echo "Hello World" and return the output',
+      testServerUrl
+    );
     expect(result).toContain('Hello World');
-    await client.disconnect();
   });
 
-  test('should handle command timeout', async () => {
-    await client.connect();
-    await expect(
-      client.executeCommand('sleep 10', { timeout: 1 })
-    ).rejects.toThrow();
-    await client.disconnect();
+  test('should handle command errors gracefully', async () => {
+    const result = await runAITerminalSession(
+      'Execute an invalid command like "invalidcommand123"',
+      testServerUrl
+    );
+    expect(result).toContain('error');
   });
 });
 ```

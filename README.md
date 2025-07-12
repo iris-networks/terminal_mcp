@@ -85,6 +85,10 @@ go build -o mcp-terminal-server
 - `github.com/mark3labs/mcp-go` - MCP Go library
 - Go 1.23+ (automatically managed)
 
+## Integration with Iris Agent
+
+This MCP server is used by the [Iris Computer Use Agent](https://agent.tryiris.dev), our advanced computer use agent for automated terminal interactions.
+
 ## License
 
-This project is provided as-is for educational and development purposes.
+This project is provided as-is for development purposes.
