@@ -9,7 +9,7 @@ echo "🚀 MCP Terminal Server - Persistent Shell Examples"
 echo "=================================================="
 
 # Configuration
-PORT=8091
+PORT=8080
 HOST=localhost
 SERVER_URL="http://$HOST:$PORT"
 
@@ -195,4 +195,4 @@ echo "  🔨 Development workflows (npm, git, build tools)"
 echo "  📁 File system navigation and manipulation"
 echo "  🔧 Configuration and environment setup"
 echo "  📊 Data processing pipelines"
-echo "  🧪 Testing and debugging"
+echo "  🧪 Testing and debugging"run-http
