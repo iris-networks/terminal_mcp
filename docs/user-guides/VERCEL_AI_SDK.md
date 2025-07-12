@@ -305,22 +305,42 @@ export OPENAI_API_KEY=your-api-key-here
 ```typescript
 import { createHttpTransport } from '@modelcontextprotocol/sdk/client/http.js';
 import { createStdioTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { createMCPClient } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/http.js';
 
-// Local HTTP transport (StreamableHTTP)
+// Method 1: Using createHttpTransport (current approach)
 const httpTransport = createHttpTransport(new URL('http://localhost:3001/mcp'));
 
-// Remote HTTP transport
+// Method 2: Using StreamableHTTPClientTransport with session management
+async function initializeMCPWithSession() {
+    const url = new URL('http://localhost:8080/mcp');
+    const mcpClient = await createMCPClient({
+        transport: new StreamableHTTPClientTransport(url, {
+            sessionId: 'session_123',
+        }),
+    });
+
+    const mcpTools = await mcpClient.tools();
+    console.log('[BrowserAgent] MCP client initialized with tools:', mcpTools);
+    
+    return { mcpClient, mcpTools };
+}
+
+// Method 3: Remote HTTP transport
 const remoteTransport = createHttpTransport(new URL('https://your-server.com/mcp'));
 
-// Local stdio transport (if running locally)
+// Method 4: Local stdio transport (if running locally)
 const stdioTransport = createStdioTransport({
   command: './mcp-terminal-server',
   args: [],
 });
 
-// Use with MCP client
+// Use with MCP client (Method 1)
 const client = new MCPClient(clientInfo, capabilities);
 await client.connect(httpTransport); // or stdioTransport
+
+// Alternative usage with session management (Method 2)
+const { mcpClient, mcpTools } = await initializeMCPWithSession();
 ```
 
 ## Error Handling

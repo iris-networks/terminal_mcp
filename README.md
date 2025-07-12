@@ -19,7 +19,7 @@ A Model Context Protocol (MCP) server written in Go that provides secure termina
 
 ```bash
 # Build the server
-go build -o mcp-terminal-server
+make build
 
 # Run in HTTP mode with StreamableHTTP transport
 ./mcp-terminal-server --http --port 8080
@@ -138,49 +138,22 @@ The server follows the standard MCP protocol and should work with any compliant 
 
 ### Building
 
-#### Native Go Build
 ```bash
-go build -o mcp-terminal-server
-```
+# Build for current platform
+make build
 
-#### Multi-Platform Native Build
-```bash
+# Build for all platforms
 make build-all
-```
 
-#### Docker Multi-Architecture Build
-```bash
-# Build for local use (AMD64 and ARM64)
+# Build Docker images
 make docker-build
 
-# Build and push to registry
+# Build and push Docker images
 REGISTRY=your-registry.com make docker-push
 
-# Build with custom tag
-TAG=v1.0.0 make docker-build
+# Build DXT package for distribution
+make dxt
 ```
-
-### Building DXT Package
-
-To build a DXT package for distribution:
-
-```bash
-# Make the build script executable
-chmod +x build-dxt.sh
-
-# Build the DXT package
-./build-dxt.sh
-```
-
-This will:
-1. Build cross-platform binaries (macOS AMD64/ARM64, Linux AMD64/ARM64)
-2. Create a DXT package with the manifest and binaries
-3. Generate `dist/terminal-mcp.dxt` for installation in Claude Desktop
-
-**Requirements for DXT build:**
-- Go 1.23+
-- `dxt` CLI tool installed
-- Unix-like environment (macOS/Linux)
 
 ### Dependencies
 
