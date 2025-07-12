@@ -11,9 +11,7 @@ A Model Context Protocol (MCP) server written in Go that provides secure termina
 - **Flexible shell support**: Configurable shell for command execution
 - **Multiple transport modes**: 
   - STDIO mode for traditional MCP clients
-  - HTTP mode for web-based integrations
-  - **🌊 Server-Sent Events (SSE)**: Real-time event streaming for live command monitoring
-- **REST API**: HTTP endpoints for easy integration with web applications
+  - **🌐 StreamableHTTP transport**: Standards-compliant HTTP-based MCP transport for web integrations
 - **Flexible session management**: Use any session ID you want - no pre-registration required
 - **🎉 Persistent shell sessions**: Maintain shell state between commands (working directory, environment variables, etc.)
 
@@ -23,8 +21,8 @@ A Model Context Protocol (MCP) server written in Go that provides secure termina
 # Build the server
 go build -o mcp-terminal-server
 
-# Run in HTTP mode with SSE support
-./mcp-terminal-server -sse -port 8080
+# Run in HTTP mode with StreamableHTTP transport
+./mcp-terminal-server --http --port 8080
 
 # Run in STDIO mode (default)
 ./mcp-terminal-server
@@ -32,18 +30,27 @@ go build -o mcp-terminal-server
 
 ## 🚀 Quick Testing
 
-### Test HTTP Transport
+### Test StreamableHTTP Transport
 ```bash
-# Run HTTP examples (works without SSE)
-chmod +x http_examples.sh
-./http_examples.sh
-```
+# Start server in HTTP mode
+./mcp-terminal-server --http --port 8080
 
-### Test SSE Transport
-```bash
-# Run comprehensive SSE tests
-chmod +x sse_examples.sh
-./sse_examples.sh
+# Test MCP initialization
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test-client", "version": "1.0.0"}}}'
+
+# Test tools listing (use session ID from initialize response)
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <session-id>" \
+  -d '{"jsonrpc": "2.0", "id": 2, "method": "tools/list"}'
+
+# Execute a command
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <session-id>" \
+  -d '{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "execute_command", "arguments": {"command": "echo Hello StreamableHTTP!"}}}'
 ```
 
 ### Test Persistent Shell
@@ -51,29 +58,6 @@ chmod +x sse_examples.sh
 # Test persistent shell functionality
 chmod +x persistent_shell_examples.sh
 ./persistent_shell_examples.sh
-```
-
-### Test with Web Client
-```bash
-# Start server with SSE
-./mcp-terminal-server -sse -port 8080
-
-# Open the web client in your browser
-open sse_test_client.html
-# Or manually navigate to: file:///path/to/sse_test_client.html
-```
-
-### Manual SSE Testing
-```bash
-# Test SSE connection with curl
-curl -H "Accept: text/event-stream" \
-     -H "Cache-Control: no-cache" \
-     "http://localhost:8080/sse?sessionId=test"
-
-# Send a command while SSE is running
-curl -X POST "http://localhost:8080/message?sessionId=test" \
-     -H "Content-Type: application/json" \
-     -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_command","arguments":{"command":"echo Hello SSE!"}}}'
 ```
 
 ## Documentation
@@ -93,19 +77,20 @@ curl -X POST "http://localhost:8080/message?sessionId=test" \
 
 ## Server Endpoints
 
-When running in HTTP mode (`-sse` flag), the server provides these endpoints:
+When running in HTTP mode (`--http` flag), the server provides:
 
-- **`GET /`** - Server information and available endpoints
-- **`POST /execute`** - Direct command execution (no session required)
-- **`POST /message?sessionId=<id>`** - MCP protocol endpoint with session support
-- **`GET /sse?sessionId=<id>`** - Server-Sent Events stream for real-time monitoring
+- **`POST /mcp`** - StreamableHTTP transport endpoint for all MCP operations
+  - Supports `initialize`, `tools/list`, `tools/call` methods
+  - Requires `Mcp-Session-Id` header for authenticated requests
+  - Returns session ID in response headers for `initialize` calls
 
-### SSE Events
+### MCP Protocol Support
 
-The SSE endpoint streams these event types:
-- **`connected`** - Initial connection established
-- **`heartbeat`** - Periodic connection health check (every 30s)
-- **`session_status`** - Session information updates (every 5s)
+The server implements the [Model Context Protocol](https://modelcontextprotocol.io/) specification:
+- **JSON-RPC 2.0** communication
+- **Session management** with UUID-based session IDs
+- **Tool execution** with structured input/output
+- **Error handling** with standard JSON-RPC error codes
 
 ## Platform Support
 

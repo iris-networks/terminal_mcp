@@ -1,6 +1,6 @@
 # Getting Started with MCP Terminal Server
 
-This guide will help you get the MCP Terminal Server up and running with both stdio and SSE modes.
+This guide will help you get the MCP Terminal Server up and running with both STDIO and StreamableHTTP transport modes.
 
 ## Prerequisites
 
@@ -38,30 +38,30 @@ This is the standard mode for MCP servers, using stdin/stdout for communication:
 
 The server will start in stdio mode and wait for JSON-RPC messages.
 
-### Method 2: SSE Mode (HTTP Server)
+### Method 2: HTTP Mode (StreamableHTTP Transport)
 
 For web-based integrations and easier testing:
 
 ```bash
-./mcp-terminal-server -sse
+./mcp-terminal-server --http
 ```
 
 **Custom Host and Port:**
 ```bash
-./mcp-terminal-server -sse -host 0.0.0.0 -port 3000
+./mcp-terminal-server --http --host 0.0.0.0 --port 3000
 ```
 
 ### Command Line Options
 
 ```bash
-./mcp-terminal-server -help
+./mcp-terminal-server --help
 ```
 
 Available options:
-- `-sse`: Enable SSE mode (HTTP server)
-- `-host string`: Host for SSE server (default "localhost")
-- `-port string`: Port for SSE server (default "8080")
-- `-help`: Show help
+- `--http`: Enable HTTP mode (StreamableHTTP transport)
+- `--host string`: Host for HTTP server (default "localhost")
+- `--port string`: Port for HTTP server (default "8080")
+- `--help`: Show help
 
 ## Environment Variables
 
@@ -96,29 +96,39 @@ EOF
 cat test_stdio.json | ./mcp-terminal-server
 ```
 
-### Test SSE Mode
+### Test HTTP Mode
 
-1. Start the server in SSE mode:
+1. Start the server in HTTP mode:
    ```bash
-   ./mcp-terminal-server -sse
+   ./mcp-terminal-server --http
    ```
 
-2. In another terminal, test the endpoints:
+2. In another terminal, test the MCP endpoint:
    ```bash
-   # Check server info
-   curl http://localhost:8080/
-   
-   # Test SSE endpoint
-   curl -N -H "Accept: text/event-stream" http://localhost:8080/sse
-   ```
-
-3. Send a command via the message endpoint:
-   ```bash
-   curl -X POST http://localhost:8080/message \
+   # Initialize a session
+   curl -X POST http://localhost:8080/mcp \
      -H "Content-Type: application/json" \
      -d '{
        "jsonrpc": "2.0",
        "id": 1,
+       "method": "initialize",
+       "params": {
+         "protocolVersion": "2024-11-05",
+         "capabilities": {},
+         "clientInfo": {"name": "test", "version": "1.0.0"}
+       }
+     }'
+   ```
+
+3. Use the session ID from the response to send commands:
+   ```bash
+   # Replace <session-id> with the actual session ID
+   curl -X POST http://localhost:8080/mcp \
+     -H "Content-Type: application/json" \
+     -H "Mcp-Session-Id: <session-id>" \
+     -d '{
+       "jsonrpc": "2.0",
+       "id": 2,
        "method": "tools/call",
        "params": {
          "name": "execute_command",
@@ -139,29 +149,27 @@ cat test_stdio.json | ./mcp-terminal-server
 2024/01/15 10:30:00 Starting STDIO server
 ```
 
-### SSE Mode Output
+### HTTP Mode Output
 ```
 2024/01/15 10:30:00 Starting MCP Terminal Server on platform: darwin
 2024/01/15 10:30:00 Default timeout: 30s
 2024/01/15 10:30:00 Default shell: /bin/bash
-2024/01/15 10:30:00 Starting SSE server on localhost:8080
-2024/01/15 10:30:00 Server endpoints:
-2024/01/15 10:30:00   Info: http://localhost:8080/
-2024/01/15 10:30:00   SSE: http://localhost:8080/sse
-2024/01/15 10:30:00   Message: http://localhost:8080/message
+2024/01/15 10:30:00 Starting StreamableHTTP server on localhost:8080
+2024/01/15 10:30:00 Server endpoint:
+2024/01/15 10:30:00   MCP: http://localhost:8080/mcp (StreamableHTTP transport)
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-**1. Port Already in Use (SSE Mode)**
+**1. Port Already in Use (HTTP Mode)**
 ```bash
 # Check what's using the port
 lsof -i :8080
 
 # Use a different port
-./mcp-terminal-server -sse -port 8081
+./mcp-terminal-server --http --port 8081
 ```
 
 **2. Permission Denied**

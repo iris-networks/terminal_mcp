@@ -13,7 +13,7 @@ type Config struct {
 	DefaultTimeout time.Duration
 	Platform       string
 	Shell          string
-	SSEMode        bool
+	HTTPMode       bool
 	Port           string
 	Host           string
 }
@@ -23,7 +23,7 @@ func NewConfig() *Config {
 	cfg := &Config{
 		DefaultTimeout: 30 * time.Second,
 		Platform:       runtime.GOOS,
-		SSEMode:        false,
+		HTTPMode:       false,
 		Port:           "8080",
 		Host:           "localhost",
 	}
@@ -41,9 +41,9 @@ func NewConfig() *Config {
 // ParseFlags parses command line flags and environment variables
 func (c *Config) ParseFlags() {
 	var (
-		sseMode = flag.Bool("sse", false, "Enable SSE mode (HTTP server)")
-		port    = flag.String("port", "8080", "Port for SSE server")
-		host    = flag.String("host", "localhost", "Host for SSE server")
+		httpMode = flag.Bool("http", false, "Enable HTTP mode (StreamableHTTP transport)")
+		port     = flag.String("port", "8080", "Port for HTTP server")
+		host     = flag.String("host", "localhost", "Host for HTTP server")
 		help    = flag.Bool("help", false, "Show help")
 	)
 	flag.Parse()
@@ -53,7 +53,7 @@ func (c *Config) ParseFlags() {
 		os.Exit(0)
 	}
 
-	c.SSEMode = *sseMode
+	c.HTTPMode = *httpMode
 	c.Port = *port
 	c.Host = *host
 

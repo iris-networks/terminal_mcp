@@ -3,12 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 
 	"github.com/mark3labs/mcp-go/server"
 	"mcp-terminal-server/internal/config"
 	"mcp-terminal-server/internal/executor"
-	"mcp-terminal-server/internal/handlers"
 	"mcp-terminal-server/internal/session"
 	"mcp-terminal-server/internal/tools"
 )
@@ -39,26 +37,19 @@ func main() {
 	log.Printf("Default timeout: %v", cfg.DefaultTimeout)
 	log.Printf("Default shell: %s", cfg.Shell)
 
-	if cfg.SSEMode {
-		// HTTP mode
-		log.Printf("Starting HTTP server on %s:%s", cfg.Host, cfg.Port)
-
-		// Create HTTP server
-		httpServer := handlers.NewHTTPServer(cfg, toolsRegistry, sessionManager, exec)
-
-		// Setup HTTP routes
-		mux := http.NewServeMux()
-		httpServer.SetupRoutes(mux)
-
+	if cfg.HTTPMode {
+		// HTTP mode with StreamableHTTP transport
 		addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
-		log.Printf("Server endpoints:")
-		log.Printf("  Info: http://%s/", addr)
-		log.Printf("  Execute: http://%s/execute (direct command execution)", addr)
-		log.Printf("  Message: http://%s/message?sessionId=<any-id> (MCP protocol)", addr)
-		log.Printf("  SSE: http://%s/sse?sessionId=<any-id> (Server-Sent Events)", addr)
+		log.Printf("Starting StreamableHTTP server on %s", addr)
 
-		if err := http.ListenAndServe(addr, mux); err != nil {
-			log.Fatalf("HTTP server error: %v", err)
+		// Create StreamableHTTP server
+		streamableServer := server.NewStreamableHTTPServer(mcpServer)
+
+		log.Printf("Server endpoint:")
+		log.Printf("  MCP: http://%s/mcp (StreamableHTTP transport)", addr)
+
+		if err := streamableServer.Start(addr); err != nil {
+			log.Fatalf("StreamableHTTP server error: %v", err)
 		}
 	} else {
 		// STDIO mode

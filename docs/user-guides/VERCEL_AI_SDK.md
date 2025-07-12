@@ -1,6 +1,6 @@
 # Connecting MCP Terminal Server to Vercel AI SDK
 
-This guide shows how to integrate the MCP Terminal Server with Vercel AI SDK for AI-powered terminal command execution.
+This guide shows how to integrate the MCP Terminal Server with Vercel AI SDK using the new MCP tools feature for AI-powered terminal command execution.
 
 ## Prerequisites
 
@@ -14,35 +14,79 @@ This guide shows how to integrate the MCP Terminal Server with Vercel AI SDK for
 First, install the required dependencies:
 
 ```bash
-npm install ai @ai-sdk/openai
+npm install ai @ai-sdk/openai @modelcontextprotocol/sdk
 # or
-yarn add ai @ai-sdk/openai
+yarn add ai @ai-sdk/openai @modelcontextprotocol/sdk
 ```
 
 ## Setup
 
-### 1. Start MCP Terminal Server in SSE Mode
+### 1. Start MCP Terminal Server in HTTP Mode
 
 ```bash
-./mcp-terminal-server -sse -port 3001
+./mcp-terminal-server --http --port 3001
 ```
 
-### 2. Create MCP Client
+### 2. Create MCP Tools Integration
 
-Create a file `mcp-client.ts`:
+Create a file `mcp-tools.ts`:
 
 ```typescript
-import { experimental_createMCPClient as createMCPClient } from 'ai';
+import { createHttpTransport } from '@modelcontextprotocol/sdk/client/http.js';
+import { MCPClient } from '@modelcontextprotocol/sdk/client/index.js';
+import { tool } from 'ai';
+import { z } from 'zod';
 
-export async function createTerminalMCPClient(serverUrl: string = 'http://localhost:3001') {
-  const mcpClient = await createMCPClient({
-    transport: {
-      type: 'sse',
-      url: `${serverUrl}/sse`,
+export async function createTerminalMCPTools(serverUrl: string = 'http://localhost:3001') {
+  // Create HTTP transport for StreamableHTTP
+  const transport = createHttpTransport(new URL(`${serverUrl}/mcp`));
+  
+  // Create MCP client
+  const client = new MCPClient(
+    {
+      name: 'terminal-client',
+      version: '1.0.0',
     },
-  });
+    {
+      capabilities: {},
+    }
+  );
 
-  return mcpClient;
+  // Connect to the server
+  await client.connect(transport);
+
+  // Initialize the connection
+  const initResult = await client.initialize();
+  console.log('Connected to MCP Terminal Server:', initResult.serverInfo);
+
+  // Get available tools from the server
+  const toolsResult = await client.listTools();
+  
+  // Convert MCP tools to AI SDK tool format
+  const aiTools: Record<string, any> = {};
+
+  for (const mcpTool of toolsResult.tools) {
+    aiTools[mcpTool.name] = tool({
+      description: mcpTool.description,
+      parameters: mcpTool.inputSchema as z.ZodSchema,
+      execute: async (params) => {
+        const result = await client.callTool({
+          name: mcpTool.name,
+          arguments: params,
+        });
+        
+        return {
+          result: result.content,
+          isError: result.isError,
+        };
+      },
+    });
+  }
+
+  return {
+    tools: aiTools,
+    client,
+  };
 }
 ```
 
@@ -53,16 +97,16 @@ Create `ai-terminal-integration.ts`:
 ```typescript
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
-import { createTerminalMCPClient } from './mcp-client';
+import { createTerminalMCPTools } from './mcp-tools';
 
 export async function runAITerminalSession(userPrompt: string, serverUrl?: string): Promise<string> {
-  // Create MCP client
-  const mcpClient = await createTerminalMCPClient(serverUrl);
+  // Create MCP tools integration
+  const { tools, client } = await createTerminalMCPTools(serverUrl);
 
   try {
     const result = await generateText({
       model: openai('gpt-4o'),
-      tools: await mcpClient.tools(), // Use MCP tools directly
+      tools, // Use converted MCP tools
       messages: [
         {
           role: 'system',
@@ -75,7 +119,10 @@ export async function runAITerminalSession(userPrompt: string, serverUrl?: strin
           - Capture stderr when debugging issues
           - Provide clear explanations of command outputs
           
-          You have access to terminal execution tools through the MCP protocol.`
+          Available tools:
+          - execute_command: Execute single commands with timeout
+          - persistent_shell: Execute commands in persistent shell sessions
+          - session_manager: Manage shell sessions (list, close)`
         },
         {
           role: 'user',
@@ -84,6 +131,9 @@ export async function runAITerminalSession(userPrompt: string, serverUrl?: strin
       ],
       maxToolRoundtrips: 5,
     });
+
+    // Close the MCP connection
+    await client.close();
 
     return result.text;
   } catch (error) {
@@ -250,32 +300,27 @@ export MCP_SHELL=/bin/zsh
 export OPENAI_API_KEY=your-api-key-here
 ```
 
-### Custom MCP Client Configuration
+### Custom MCP Transport Configuration
 
 ```typescript
-// Local MCP server
-const mcpClient = await createMCPClient({
-  transport: {
-    type: 'sse',
-    url: 'http://localhost:3001/sse',
-  },
+import { createHttpTransport } from '@modelcontextprotocol/sdk/client/http.js';
+import { createStdioTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+
+// Local HTTP transport (StreamableHTTP)
+const httpTransport = createHttpTransport(new URL('http://localhost:3001/mcp'));
+
+// Remote HTTP transport
+const remoteTransport = createHttpTransport(new URL('https://your-server.com/mcp'));
+
+// Local stdio transport (if running locally)
+const stdioTransport = createStdioTransport({
+  command: './mcp-terminal-server',
+  args: [],
 });
 
-// Remote MCP server
-const mcpClient = await createMCPClient({
-  transport: {
-    type: 'sse',
-    url: 'https://your-server.com/sse',
-  },
-});
-
-// For local stdio transport (if running locally)
-const mcpClient = await createMCPClient({
-  transport: {
-    type: 'stdio',
-    command: './mcp-terminal-server',
-  },
-});
+// Use with MCP client
+const client = new MCPClient(clientInfo, capabilities);
+await client.connect(httpTransport); // or stdioTransport
 ```
 
 ## Error Handling
@@ -283,7 +328,7 @@ const mcpClient = await createMCPClient({
 ### Robust Error Handling Example
 
 ```typescript
-import { createTerminalMCPClient } from './mcp-client';
+import { createTerminalMCPTools } from './mcp-tools';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 
@@ -292,12 +337,14 @@ async function safeExecuteCommand(command: string, serverUrl?: string): Promise<
   output?: string;
   error?: string;
 }> {
+  let client;
   try {
-    const mcpClient = await createTerminalMCPClient(serverUrl);
+    const { tools, client: mcpClient } = await createTerminalMCPTools(serverUrl);
+    client = mcpClient;
     
     const result = await generateText({
       model: openai('gpt-4o'),
-      tools: await mcpClient.tools(),
+      tools,
       messages: [
         {
           role: 'system',
@@ -320,6 +367,15 @@ async function safeExecuteCommand(command: string, serverUrl?: string): Promise<
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
+  } finally {
+    // Always close the MCP client
+    if (client) {
+      try {
+        await client.close();
+      } catch (closeError) {
+        console.warn('Failed to close MCP client:', closeError);
+      }
+    }
   }
 }
 ```
@@ -354,16 +410,21 @@ if (!validateCommand(prompt)) {
 ### Unit Tests
 
 ```typescript
-import { createTerminalMCPClient } from '../mcp-client';
+import { createTerminalMCPTools } from '../mcp-tools';
 import { runAITerminalSession } from '../ai-terminal-integration';
 
 describe('Terminal MCP Integration', () => {
   const testServerUrl = 'http://localhost:3001';
 
-  test('should create MCP client successfully', async () => {
-    const client = await createTerminalMCPClient(testServerUrl);
-    expect(client).toBeDefined();
-    expect(client.tools).toBeDefined();
+  test('should create MCP tools successfully', async () => {
+    const { tools, client } = await createTerminalMCPTools(testServerUrl);
+    expect(tools).toBeDefined();
+    expect(tools.execute_command).toBeDefined();
+    expect(tools.persistent_shell).toBeDefined();
+    expect(tools.session_manager).toBeDefined();
+    
+    // Clean up
+    await client.close();
   });
 
   test('should execute simple command through AI', async () => {
@@ -380,6 +441,14 @@ describe('Terminal MCP Integration', () => {
       testServerUrl
     );
     expect(result).toContain('error');
+  });
+
+  test('should work with persistent shell sessions', async () => {
+    const result = await runAITerminalSession(
+      'Create a new shell session, change to /tmp directory, then list the current directory',
+      testServerUrl
+    );
+    expect(result).toContain('/tmp');
   });
 });
 ```
@@ -417,4 +486,22 @@ CMD ["npm", "start"]
 3. **Scaling**: Consider multiple MCP server instances
 4. **Caching**: Cache frequent command results when appropriate
 
-This integration provides a powerful way to combine AI capabilities with terminal command execution through the MCP protocol.
+## What's New
+
+This integration now uses the latest Vercel AI SDK v5 MCP tools feature, which provides:
+
+- **Native MCP Support**: Direct integration with MCP servers without custom wrappers
+- **Type Safety**: Full TypeScript support with proper type inference
+- **Better Performance**: Optimized connection handling and resource management
+- **StreamableHTTP Transport**: Uses the standard MCP StreamableHTTP transport for better compatibility
+
+## Migration from SSE
+
+If you were using the previous SSE-based integration:
+
+1. **Update dependencies**: Add `@modelcontextprotocol/sdk`
+2. **Change server startup**: Use `--http` instead of `--sse` flag
+3. **Update transport**: Switch from SSE to StreamableHTTP transport
+4. **Use new MCP tools**: Replace `experimental_createMCPClient` with native MCP SDK
+
+This integration provides a powerful and standards-compliant way to combine AI capabilities with terminal command execution through the MCP protocol.

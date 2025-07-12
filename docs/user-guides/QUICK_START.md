@@ -1,96 +1,102 @@
 # Quick Start Guide
 
-## HTTP Mode (Recommended for Web Integration)
+## HTTP Mode (StreamableHTTP Transport)
 
 ### 1. Start the Server
 ```bash
-./mcp-terminal-server -sse -port 8080
+./mcp-terminal-server --http --port 8080
 ```
 
-### 2. Check Server Status
+### 2. Initialize MCP Session
 ```bash
-curl http://localhost:8080/
+# First, initialize a session
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {"name": "quick-start", "version": "1.0.0"}
+    }
+  }'
+
+# Response will include session ID in Mcp-Session-Id header
 ```
 
 ### 3. Execute Commands
 
-**Option A: Using any session ID (MCP protocol)**
+**Get session ID from initialize response, then:**
 ```bash
-curl -X POST "http://localhost:8080/message?sessionId=my-session-123" \
+# Replace <session-id> with actual session ID from step 2
+curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <session-id>" \
   -d '{
     "jsonrpc": "2.0",
-    "id": 1,
+    "id": 2,
     "method": "tools/call",
     "params": {
       "name": "execute_command",
       "arguments": {
-        "command": "echo Hello World"
+        "command": "echo Hello StreamableHTTP!"
       }
     }
   }'
 ```
 
-**Option B: Direct execution (no session required)**
+### 4. List Available Tools
 ```bash
-curl -X POST "http://localhost:8080/execute" \
+curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <session-id>" \
   -d '{
-    "params": {
-      "name": "execute_command",
-      "arguments": {
-        "command": "echo Hello World"
-      }
-    }
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/list"
   }'
 ```
 
-### 4. Persistent Shell Sessions (NEW!)
+### 5. Persistent Shell Sessions
 
 **Use the same shell across multiple commands:**
 ```bash
 # Command 1: pwd
-curl -X POST "http://localhost:8080/message?sessionId=my-work-session" \
+curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <session-id>" \
   -d '{
-    "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+    "jsonrpc": "2.0", "id": 4, "method": "tools/call",
     "params": {
       "name": "persistent_shell",
-      "arguments": {"command": "pwd", "session_id": "my-work-session"}
+      "arguments": {"command": "pwd", "session_id": "shell-session-1"}
     }
   }'
 
 # Command 2: cd /tmp (directory change persists!)
-curl -X POST "http://localhost:8080/message?sessionId=my-work-session" \
+curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <session-id>" \
   -d '{
-    "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+    "jsonrpc": "2.0", "id": 5, "method": "tools/call",
     "params": {
       "name": "persistent_shell",
-      "arguments": {"command": "cd /tmp", "session_id": "my-work-session"}
+      "arguments": {"command": "cd /tmp", "session_id": "shell-session-1"}
     }
   }'
 
 # Command 3: pwd (shows /tmp!)
-curl -X POST "http://localhost:8080/message?sessionId=my-work-session" \
+curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <session-id>" \
   -d '{
-    "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+    "jsonrpc": "2.0", "id": 6, "method": "tools/call",
     "params": {
       "name": "persistent_shell",
-      "arguments": {"command": "pwd", "session_id": "my-work-session"}
+      "arguments": {"command": "pwd", "session_id": "shell-session-1"}
     }
-  }'
-```
-
-### 5. List Available Tools
-```bash
-curl -X POST "http://localhost:8080/message?sessionId=any-id" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "tools/list"
   }'
 ```
 
@@ -117,27 +123,28 @@ export MCP_COMMAND_TIMEOUT=60
 export MCP_SHELL=/bin/zsh
 
 # Start server
-./mcp-terminal-server -sse -port 8080
+./mcp-terminal-server --http --port 8080
 ```
 
 ### Command Line Options
 ```bash
 # Custom host and port
-./mcp-terminal-server -sse -host 0.0.0.0 -port 3000
+./mcp-terminal-server --http --host 0.0.0.0 --port 3000
 
 # Show help
-./mcp-terminal-server -help
+./mcp-terminal-server --help
 ```
 
 ## Examples
 
 ### Execute with Timeout
 ```bash
-curl -X POST "http://localhost:8080/message?sessionId=timeout-test" \
+curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <session-id>" \
   -d '{
     "jsonrpc": "2.0",
-    "id": 1,
+    "id": 7,
     "method": "tools/call",
     "params": {
       "name": "execute_command",
@@ -151,11 +158,12 @@ curl -X POST "http://localhost:8080/message?sessionId=timeout-test" \
 
 ### Execute with Custom Shell
 ```bash
-curl -X POST "http://localhost:8080/message?sessionId=shell-test" \
+curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <session-id>" \
   -d '{
     "jsonrpc": "2.0",
-    "id": 1,
+    "id": 8,
     "method": "tools/call",
     "params": {
       "name": "execute_command",
@@ -169,11 +177,12 @@ curl -X POST "http://localhost:8080/message?sessionId=shell-test" \
 
 ### Capture stderr Separately
 ```bash
-curl -X POST "http://localhost:8080/message?sessionId=stderr-test" \
+curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <session-id>" \
   -d '{
     "jsonrpc": "2.0",
-    "id": 1,
+    "id": 9,
     "method": "tools/call",
     "params": {
       "name": "execute_command",
@@ -205,7 +214,7 @@ See [VERCEL_AI_SDK.md](VERCEL_AI_SDK.md) for complete integration examples.
 
 **Port already in use:**
 ```bash
-./mcp-terminal-server -sse -port 8081
+./mcp-terminal-server --http --port 8081
 ```
 
 **Permission denied:**
@@ -215,7 +224,7 @@ chmod +x mcp-terminal-server
 
 **Command not found:**
 ```bash
-./mcp-terminal-server -help
+./mcp-terminal-server --help
 ```
 
-That's it! The server is now ready for both traditional MCP clients and modern web integrations.
+That's it! The server is now ready for both traditional MCP clients and modern web integrations using the standards-compliant StreamableHTTP transport.
