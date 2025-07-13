@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/github/license/iris-networks/terminal_mcp?style=for-the-badge&logoColor=white" alt="License">
 </p>
 
-### 🚀 *A blazing-fast Model Context Protocol server that unleashes the power of secure terminal execution*
+### 🚀 *A blazing-fast Model Context Protocol server that purrs with the power of secure terminal execution*
 
 <h4>✨ Cross-platform • ⚡ High-performance • 🔒 Ultra-secure ✨</h4>
 
