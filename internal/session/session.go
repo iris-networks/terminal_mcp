@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -66,6 +67,13 @@ func (sm *Manager) GetOrCreateSession(sessionID string, shell string) (*ShellSes
 	}
 
 	cmd := exec.Command(shell)
+
+	// Set up environment variables
+	cmd.Env = os.Environ() // Start with current environment
+	if sm.config.Display != "" {
+		// Add or update DISPLAY variable
+		cmd.Env = append(cmd.Env, "DISPLAY="+sm.config.Display)
+	}
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

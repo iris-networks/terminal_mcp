@@ -3,6 +3,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -61,6 +62,13 @@ func (e *Executor) Execute(request mcp.CallToolRequest) (*mcp.CallToolResult, er
 		cmd = exec.CommandContext(ctx, shell, "-c", command)
 	default:
 		return mcp.NewToolResultError(fmt.Sprintf("Platform %s not supported", e.config.Platform)), nil
+	}
+
+	// Set up environment variables
+	cmd.Env = os.Environ() // Start with current environment
+	if e.config.Display != "" {
+		// Add or update DISPLAY variable
+		cmd.Env = append(cmd.Env, "DISPLAY="+e.config.Display)
 	}
 
 	var stdout, stderr strings.Builder

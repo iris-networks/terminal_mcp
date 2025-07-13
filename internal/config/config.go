@@ -16,6 +16,7 @@ type Config struct {
 	HTTPMode       bool
 	Port           string
 	Host           string
+	Display        string
 }
 
 // NewConfig creates a new configuration with defaults
@@ -67,5 +68,10 @@ func (c *Config) ParseFlags() {
 	// Check for custom shell environment variable
 	if shell := os.Getenv("MCP_SHELL"); shell != "" {
 		c.Shell = shell
+	}
+
+	// Check for DISPLAY environment variable
+	if display := os.Getenv("DISPLAY"); display != "" {
+		c.Display = display
 	}
 }

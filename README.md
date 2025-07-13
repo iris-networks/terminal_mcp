@@ -9,6 +9,7 @@ A Model Context Protocol (MCP) server written in Go that provides secure termina
 - **Secure execution**: Commands run in controlled environment with proper error handling
 - **Platform-aware**: Automatically detects and adapts to the host platform
 - **Flexible shell support**: Configurable shell for command execution
+- **GUI application support**: Automatic DISPLAY environment variable forwarding for X11 applications
 - **Multiple transport modes**: 
   - STDIO mode for traditional MCP clients
   - **🌐 StreamableHTTP transport**: Standards-compliant HTTP-based MCP transport for web integrations
@@ -75,6 +76,27 @@ chmod +x examples/persistent_shell_examples.sh
 2. **persistent_shell** - Execute commands in persistent shell sessions
 3. **session_manager** - Manage shell sessions (list, close)
 
+## Environment Variables
+
+The server supports the following environment variables:
+
+- **`MCP_COMMAND_TIMEOUT`** - Default command timeout in seconds (default: 30)
+- **`MCP_SHELL`** - Custom shell to use for command execution (default: /bin/bash on Unix)
+- **`DISPLAY`** - X11 display for GUI applications (automatically forwarded to commands)
+
+### GUI Application Support
+
+The server automatically forwards the `DISPLAY` environment variable to all executed commands, enabling GUI applications to open on the correct display. This works for both non-persistent commands and persistent shell sessions.
+
+**Example**: Launch a GUI application
+```bash
+# Set DISPLAY when starting the server
+DISPLAY=:0 ./mcp-terminal-server
+
+# GUI applications launched through MCP will use the correct display
+# e.g., xterm, firefox, gedit, etc.
+```
+
 ## Server Endpoints
 
 When running in HTTP mode (`--http` flag), the server provides:
@@ -110,7 +132,8 @@ Add to your `claude_desktop_config.json`:
     "terminal": {
       "command": "/path/to/mcp-terminal-server",
       "env": {
-        "MCP_COMMAND_TIMEOUT": "30"
+        "MCP_COMMAND_TIMEOUT": "30",
+        "DISPLAY": ":0"
       }
     }
   }
