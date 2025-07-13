@@ -1,5 +1,10 @@
 # MCP Terminal Server
 
+[![Build Status](https://github.com/iris-networks/terminal_mcp/actions/workflows/build.yml/badge.svg)](https://github.com/iris-networks/terminal_mcp/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/iris-networks/terminal_mcp)](https://github.com/iris-networks/terminal_mcp/releases)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/iris-networks/terminal_mcp)](https://golang.org/)
+[![License](https://img.shields.io/github/license/iris-networks/terminal_mcp)](LICENSE)
+
 A Model Context Protocol (MCP) server written in Go that provides secure terminal command execution with configurable timeouts and platform-specific support.
 
 ## Features
