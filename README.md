@@ -1,13 +1,17 @@
 <div align="center">
 
-# MCP Terminal Server
+# <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Desktop%20Computer.png" alt="💻" width="35" height="35" /> MCP Terminal Server
 
-[![Build Status](https://github.com/iris-networks/terminal_mcp/actions/workflows/build.yml/badge.svg)](https://github.com/iris-networks/terminal_mcp/actions/workflows/build.yml)
-[![Release](https://img.shields.io/github/v/release/iris-networks/terminal_mcp)](https://github.com/iris-networks/terminal_mcp/releases)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/iris-networks/terminal_mcp)](https://golang.org/)
-[![License](https://img.shields.io/github/license/iris-networks/terminal_mcp)](LICENSE)
+<p align="center">
+  <img src="https://img.shields.io/github/actions/workflow/status/iris-networks/terminal_mcp/build.yml?style=for-the-badge&logo=github&logoColor=white&label=BUILD" alt="Build Status">
+  <img src="https://img.shields.io/github/v/release/iris-networks/terminal_mcp?style=for-the-badge&logo=github&logoColor=white&color=success" alt="Release">
+  <img src="https://img.shields.io/github/go-mod/go-version/iris-networks/terminal_mcp?style=for-the-badge&logo=go&logoColor=white" alt="Go Version">
+  <img src="https://img.shields.io/github/license/iris-networks/terminal_mcp?style=for-the-badge&logoColor=white" alt="License">
+</p>
 
-*A Model Context Protocol (MCP) server written in Go that provides secure terminal command execution with configurable timeouts and platform-specific support.*
+### 🚀 *A blazing-fast Model Context Protocol server that unleashes the power of secure terminal execution*
+
+<h4>✨ Cross-platform • ⚡ High-performance • 🔒 Ultra-secure ✨</h4>
 
 </div>
 
