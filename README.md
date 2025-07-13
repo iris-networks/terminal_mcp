@@ -1,6 +1,4 @@
 <div align="center">
-  
-![Terminator Terminal](docs/terminator.png)
 
 # MCP Terminal Server
 
@@ -12,6 +10,8 @@
 *A Model Context Protocol (MCP) server written in Go that provides secure terminal command execution with configurable timeouts and platform-specific support.*
 
 </div>
+
+![Terminator Terminal](docs/terminator.png)
 
 ## Features
 
