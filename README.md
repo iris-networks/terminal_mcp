@@ -3,7 +3,7 @@
 # <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Desktop%20Computer.png" alt="💻" width="35" height="35" /> MCP Terminal Server
 
 <p align="center">
-  <img src="https://img.shields.io/github/actions/workflow/status/iris-networks/terminal_mcp/build.yml?style=for-the-badge&logo=github&logoColor=white&label=BUILD" alt="Build Status">
+  <img src="https://img.shields.io/github/actions/workflow/status/iris-networks/terminal_mcp/release.yml?style=for-the-badge&logo=github&logoColor=white&label=BUILD" alt="Build Status">
   <img src="https://img.shields.io/github/v/release/iris-networks/terminal_mcp?style=for-the-badge&logo=github&logoColor=white&color=success" alt="Release">
   <img src="https://img.shields.io/github/go-mod/go-version/iris-networks/terminal_mcp?style=for-the-badge&logo=go&logoColor=white" alt="Go Version">
   <img src="https://img.shields.io/github/license/iris-networks/terminal_mcp?style=for-the-badge&logoColor=white" alt="License">
